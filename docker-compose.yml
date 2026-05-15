@@ -1,4 +1,4 @@
-# Hermes Agent — gateway + dashboard
+# Hermes Agent — gateway + dashboard + Ollama (local LLM server)
 #
 # State lives in ./volumes/hermes alongside this compose file. Run the
 # one-time interactive setup wizard before `docker compose up` (see
@@ -7,11 +7,36 @@
 # Only one gateway may run against a given data directory.
 
 services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    volumes:
+      - ./volumes/ollama:/root/.ollama
+    # Localhost-only — exposed so you can `curl localhost:11434/api/tags`
+    # or pull models from the host. Hermes reaches Ollama via the
+    # in-network hostname `ollama`, not this port.
+    ports:
+      - "127.0.0.1:11434:11434"
+    # GPU passthrough (NVIDIA). Requires NVIDIA Container Toolkit; on
+    # WSL2 this also needs Docker Desktop with WSL integration and the
+    # NVIDIA Windows driver. If you don't have an NVIDIA GPU, delete
+    # the entire `deploy:` block below — Ollama will run on CPU (slow).
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
   gateway:
     image: nousresearch/hermes-agent:latest
     container_name: hermes
     restart: unless-stopped
     command: ["gateway", "run"]
+    depends_on:
+      - ollama
     volumes:
       - ./volumes/hermes:/opt/data
     environment:
