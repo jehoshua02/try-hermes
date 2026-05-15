@@ -1,3 +1,5 @@
 .env
 volumes/hermes/*
 !volumes/hermes/.gitkeep
+volumes/ollama/*
+!volumes/ollama/.gitkeep
