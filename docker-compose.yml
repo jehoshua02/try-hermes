@@ -1,0 +1,41 @@
+# Hermes Agent — gateway + dashboard
+#
+# State lives in ~/.hermes on the host. Run the one-time interactive
+# setup wizard before `docker compose up` (see README.md).
+#
+# Only one gateway may run against a given data directory.
+
+services:
+  gateway:
+    image: nousresearch/hermes-agent:latest
+    container_name: hermes
+    restart: unless-stopped
+    command: ["gateway", "run"]
+    volumes:
+      - ~/.hermes:/opt/data
+    environment:
+      - HERMES_UID=${HERMES_UID:-1000}
+      - HERMES_GID=${HERMES_GID:-1000}
+    shm_size: "1gb"
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "2.0"
+
+  dashboard:
+    image: nousresearch/hermes-agent:latest
+    container_name: hermes-dashboard
+    restart: unless-stopped
+    depends_on:
+      - gateway
+    # Localhost-only. For remote access, tunnel via:
+    #   ssh -L 9119:localhost:9119 <host>
+    ports:
+      - "127.0.0.1:9119:9119"
+    volumes:
+      - ~/.hermes:/opt/data
+    environment:
+      - HERMES_UID=${HERMES_UID:-1000}
+      - HERMES_GID=${HERMES_GID:-1000}
+    command: ["dashboard", "--host", "0.0.0.0", "--no-open"]
